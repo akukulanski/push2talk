@@ -21,7 +21,6 @@ _shortcuts = [shortcut_toggle]
 _devices = [1, 2]
 
 def set_source_mute(device, status):
-    print(f'mute {device}: {status}')
     s = {'unmute': '0', 'mute': '1', 'toggle': 'toggle'}
     cmd = f'pactl set-source-mute {device} {s[status]}'
     os.system(cmd)
@@ -45,36 +44,24 @@ class Push2Talk(Daemon):
                 set_source_mute(dev, 'unmute')
 
     def _pressed(self, key):
-        print(f'_pressed({key})')
         if self.enabled:
             if key == shortcut_toggle and not self.is_pressed:
                 self.is_pressed = True
                 for dev in _devices:
                     set_source_mute(dev, 'unmute')
-                    # set_source_mute(dev, 'toggle')
 
     def _released(self, key):
-        print(f'_released({key})')
         if self.enabled:
             if key == shortcut_toggle:
                 self.is_pressed = False
                 for dev in _devices:
                     set_source_mute(dev, 'mute')
-                    # set_source_mute(dev, 'toggle')
 
     def on_press(self, key):
-        try:
-            print(f'alphanumeric key {key.char} pressed')
-        except AttributeError:
-            print(f'special key {key} pressed')
         if key in _shortcuts:
             self._pressed(key)
 
     def on_release(self, key):
-        print(f'{key} released')
-        if key == keyboard.Key.esc:
-            # Stop listener
-            return False
         if key in _shortcuts:
             self._released(key)
 
