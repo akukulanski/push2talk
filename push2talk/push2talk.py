@@ -13,54 +13,61 @@ import sys, os
 from pynput import keyboard
 from .daemon import Daemon
 
-shortcuts = {'base': keyboard.Key.pause,
-             'enable': keyboard.Key.ctrl_l,
-             'disable': keyboard.Key.ctrl_r}
+shortcut_enable = '<ctrl>+p'
+shortcut_disable = '<alt>+p'
+shortcut_toggle = keyboard.Key.pause
 
-_device = 0
+_shortcuts = [shortcut_toggle]
+_devices = [1, 2]
 
-def toggle(device):
-    # print('toggle')
-    os.system(f'pactl set-source-mute {device} toggle')
-
-def mute(device):
-    print('mute')
-    toggle(device)
-
-def unmute(device):
-    print('unmute')
-    toggle(device)
+def set_source_mute(device, status):
+    print(f'mute {device}: {status}')
+    s = {'unmute': '0', 'mute': '1', 'toggle': 'toggle'}
+    cmd = f'pactl set-source-mute {device} {s[status]}'
+    os.system(cmd)
 
 class Push2Talk(Daemon):
 
     pressed_keys = []
     enabled = True
+    is_pressed = False
+
+    def on_enable(self):
+        if not self.enabled:
+            self.enabled = True
+            for dev in _devices:
+                set_source_mute(dev, 'mute')
+
+    def on_disable(self):
+        if self.enabled:
+            self.enabled = False
+            for dev in _devices:
+                set_source_mute(dev, 'unmute')
 
     def _pressed(self, key):
-        print(f'key={key}')
-        if key not in self.pressed_keys:
-            self.pressed_keys.append(key)
-            if key == shortcuts['base']:
-                if key['enable'] in self.pressed_keys:
-                    self.enabled = True
-                elif key['disable'] in self.pressed_keys:
-                    self.enabled = False
-                elif self.enabled:
-                    unmute(_device)
+        print(f'_pressed({key})')
+        if self.enabled:
+            if key == shortcut_toggle and not self.is_pressed:
+                self.is_pressed = True
+                for dev in _devices:
+                    set_source_mute(dev, 'unmute')
+                    # set_source_mute(dev, 'toggle')
 
     def _released(self, key):
-        if key in self.pressed_keys:
-            self.pressed_keys.remove(key)
-            if key == shortcuts['base']:
-                if self.enabled:
-                    mute(_device)
+        print(f'_released({key})')
+        if self.enabled:
+            if key == shortcut_toggle:
+                self.is_pressed = False
+                for dev in _devices:
+                    set_source_mute(dev, 'mute')
+                    # set_source_mute(dev, 'toggle')
 
     def on_press(self, key):
         try:
             print(f'alphanumeric key {key.char} pressed')
         except AttributeError:
             print(f'special key {key} pressed')
-        if key in shortcuts.values():
+        if key in _shortcuts:
             self._pressed(key)
 
     def on_release(self, key):
@@ -68,13 +75,18 @@ class Push2Talk(Daemon):
         if key == keyboard.Key.esc:
             # Stop listener
             return False
-        if key in shortcuts.values():
+        if key in _shortcuts:
             self._released(key)
 
     def run(self):
-        with keyboard.Listener(on_press=self.on_press,
-                               on_release=self.on_release) as listener:
-            listener.join()
+        g = keyboard.GlobalHotKeys({shortcut_enable: self.on_enable,
+                                    shortcut_disable: self.on_disable})
+        l = keyboard.Listener(on_press=self.on_press,
+                              on_release=self.on_release)
+        g.start()
+        l.start()
+        g.join()
+        l.join()
 
 
 if __name__ == '__main__':
