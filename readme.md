@@ -2,7 +2,7 @@
 
 ## Requirements
 
-* GNU/Linux (wasn't tested in other platforms)
+* GNU/Linux
 * PulseAudio
 * pynput (`pip install pynput`)
 
@@ -36,6 +36,6 @@ python3 -m push2talk.push2talk status
 
 
 Next improvements:
-* installable package (+ launch when boot)
-* config file with shortcuts
-* some kind of notification when enabled/disabled
+* [x] notification when start/stop/enabled/disabled
+* [ ] config file with shortcuts
+* [ ] installable package (+ launch when boot)
