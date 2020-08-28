@@ -12,6 +12,7 @@
 import sys, os
 from pynput import keyboard
 from .daemon import Daemon
+from .notify import Notification
 
 shortcut_enable = '<ctrl>+p'
 shortcut_disable = '<alt>+p'
@@ -31,15 +32,23 @@ class Push2Talk(Daemon):
     enabled = True
     is_pressed = False
 
+    def __init__(self, *args, **kwargs):
+        assert os.getuid(), 'Don\'t run as root!'
+        display = os.environ['DISPLAY']
+        self.notify = Notification(display=display)
+        Daemon.__init__(self, *args, **kwargs)
+
     def on_enable(self):
         if not self.enabled:
             self.enabled = True
+            self.notify.send(event='enabled')
             for dev in _devices:
                 set_source_mute(dev, 'mute')
 
     def on_disable(self):
         if self.enabled:
             self.enabled = False
+            self.notify.send(event='disabled')
             for dev in _devices:
                 set_source_mute(dev, 'unmute')
 
@@ -66,6 +75,7 @@ class Push2Talk(Daemon):
             self._released(key)
 
     def run(self):
+        self.notify.send('start')
         g = keyboard.GlobalHotKeys({shortcut_enable: self.on_enable,
                                     shortcut_disable: self.on_disable})
         l = keyboard.Listener(on_press=self.on_press,
@@ -74,6 +84,10 @@ class Push2Talk(Daemon):
         l.start()
         g.join()
         l.join()
+
+    def stop(self):
+        self.notify.send('stop')
+        Daemon.stop(self)
 
 
 if __name__ == '__main__':
