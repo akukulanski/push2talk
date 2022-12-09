@@ -21,10 +21,12 @@ shortcut_toggle = keyboard.Key.pause
 _shortcuts = [shortcut_toggle]
 _devices = [1, 2]
 
+
 def set_source_mute(device, status):
     s = {'unmute': '0', 'mute': '1', 'toggle': 'toggle'}
     cmd = f'pactl set-source-mute {device} {s[status]}'
     os.system(cmd)
+
 
 class Push2Talk(Daemon):
 
@@ -90,7 +92,7 @@ class Push2Talk(Daemon):
         Daemon.stop(self)
 
 
-if __name__ == '__main__':
+def main():
     _cmds = ('start', 'stop', 'restart', 'status')
     assert len(sys.argv) == 2 and sys.argv[1] in _cmds, (
             f'usage: {sys.argv[0]} {"|".join(_cmds)}')
@@ -105,3 +107,7 @@ if __name__ == '__main__':
     elif 'status' == sys.argv[1]:
         print(f'Running: {daemon.is_running()}')
     sys.exit(0)
+
+
+if __name__ == '__main__':
+    main()
